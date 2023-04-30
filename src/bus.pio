@@ -1,0 +1,39 @@
+.program bus_pio_address
+.side_set 2 opt
+.wrap_target
+;TODO: ALEH stays high, toggle it that way
+    pull block      ;pull 32 bit address
+;NOTE: SET limited to 5 pins, cannot use `set pindirs`
+;output must be set beforehand
+    nop          [3] side 0b10;aleh high, wait 7 cycles (112ns)
+    nop          [3]
+    nop          [1] side 0b11 ;alel, aleh high ;wait 1 cycle
+    out pins, 16 [3]  ;write AH (Address High 16 bits) ;wait 5 cycles
+    nop          [1]       
+    nop          [1] side 0b01 ;alel high, aleh low ;wait 1 cycle
+    out pins, 16 [3]  ;write AL (Address Low 16 bits) ;wait 7 cycles
+    nop          [1]
+    nop              side 0b00
+    mov pins, NULL   ;zero out pins
+    ;irq 3          ;start read SM
+.wrap
+
+
+.program bus_pio_read
+.side_set 1 opt
+;wait 1 irq 3
+;NOTE: SET limited to 5 pins, cannot use `set pindirs`
+nop  [7]
+nop  [7]
+nop  [7]
+nop  [7]
+nop  [7]
+nop  [7]
+.wrap_target
+    nop  [7]  side 0 ;rd low ;wait 12 cycles (112ns)
+    nop  [4]
+    nop  side 1      ;rd high ;wait 4 cycles (64ns)
+    in pins, 16      ;read 16 bits
+    push block       ;push to rx fifo
+    nop [1]           
+.wrap
